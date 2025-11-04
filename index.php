@@ -11,7 +11,7 @@ $url = $_GET['url'];
 $api_url = "https://instagram-reels-downloader-api.p.rapidapi.com/download?url=" . urlencode($url);
 
 $headers = [
-    "X-RapidAPI-Key: 568a4dcf75msh2dbbe61cbf6f51p143d88jsn15ee0d879b6e", // senin key'in
+    "X-RapidAPI-Key: 568a4dcf75msh2dbbe61c1bf6f51p143d88jsn15ee0d879b6e", // senin key'in
     "X-RapidAPI-Host: instagram-reels-downloader-api.p.rapidapi.com"
 ];
 
