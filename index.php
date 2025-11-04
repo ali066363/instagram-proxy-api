@@ -9,39 +9,69 @@ if (!isset($_GET['url'])) {
 
 $url = $_GET['url'];
 
-// Instagram embed API kullanımı
+// 1️⃣ Önce oEmbed ile dene
 $embedUrl = "https://www.instagram.com/oembed/?url=" . urlencode($url) . "&omitscript=true";
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $embedUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt_array($ch, [
+    CURLOPT_URL => $embedUrl,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_SSL_VERIFYPEER => false,
+    CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+]);
 $response = curl_exec($ch);
 curl_close($ch);
 
-if (!$response) {
-    echo json_encode(["error" => "Instagram'dan veri alınamadı."]);
-    exit;
-}
-
 $data = json_decode($response, true);
 
+// 2️⃣ Eğer oEmbed veri döndürmezse HTML kaynağını al
 if (!$data || isset($data['error'])) {
-    echo json_encode(["error" => "İçerik bulunamadı veya özel hesap."]);
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    ]);
+    $html = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$html) {
+        echo json_encode(["error" => "Instagram'dan veri alınamadı."]);
+        exit;
+    }
+
+    // Sayfa içinde video veya görsel URL'si ara
+    if (preg_match('/"video_url":"([^"]+)"/', $html, $m)) {
+        $mediaUrl = stripslashes($m[1]);
+        $type = "video";
+    } elseif (preg_match('/"display_url":"([^"]+)"/', $html, $m)) {
+        $mediaUrl = stripslashes($m[1]);
+        $type = "image";
+    } else {
+        echo json_encode(["error" => "İçerik bulunamadı veya özel hesap."]);
+        exit;
+    }
+
+    echo json_encode([
+        "status" => "ok",
+        "type" => $type,
+        "media_url" => $mediaUrl,
+        "requested_url" => $url
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// Çıktıyı düzenle
+// 3️⃣ oEmbed başarılıysa formatla
 $result = [
+    "status" => "ok",
     "type" => "post",
     "author_name" => $data["author_name"] ?? null,
-    "author_url" => $data["author_url"] ?? null,
     "title" => $data["title"] ?? null,
     "thumbnail_url" => $data["thumbnail_url"] ?? null,
     "media_url" => $data["thumbnail_url"] ?? null,
-    "html" => $data["html"] ?? null
 ];
 
 echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
