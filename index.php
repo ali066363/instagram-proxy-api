@@ -26,7 +26,7 @@ curl_setopt_array($ch, [
     CURLOPT_HTTPHEADER => $headers,
     CURLOPT_SSL_VERIFYPEER => false,
     CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT => 15
+    CURLOPT_TIMEOUT => 30
 ]);
 
 $response = curl_exec($ch);
