@@ -8,71 +8,27 @@ if (!isset($_GET['url'])) {
 }
 
 $url = $_GET['url'];
+$api_url = "https://instagram-reels-downloader-api.p.rapidapi.com/download?url=" . urlencode($url);
 
-// 1️⃣ Önce oEmbed ile dene
-$embedUrl = "https://www.instagram.com/oembed/?url=" . urlencode($url) . "&omitscript=true";
+$headers = [
+    "X-RapidAPI-Key: 568a4dcf75msh2dbbe61cbf6f51p143d88jsn15ee0d879b6e", // senin key'in
+    "X-RapidAPI-Host: instagram-reels-downloader-api.p.rapidapi.com"
+];
 
 $ch = curl_init();
 curl_setopt_array($ch, [
-    CURLOPT_URL => $embedUrl,
+    CURLOPT_URL => $api_url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    CURLOPT_HTTPHEADER => $headers,
 ]);
 $response = curl_exec($ch);
 curl_close($ch);
 
-$data = json_decode($response, true);
-
-// 2️⃣ Eğer oEmbed veri döndürmezse HTML kaynağını al
-if (!$data || isset($data['error'])) {
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    ]);
-    $html = curl_exec($ch);
-    curl_close($ch);
-
-    if (!$html) {
-        echo json_encode(["error" => "Instagram'dan veri alınamadı."]);
-        exit;
-    }
-
-    // Sayfa içinde video veya görsel URL'si ara
-    if (preg_match('/"video_url":"([^"]+)"/', $html, $m)) {
-        $mediaUrl = stripslashes($m[1]);
-        $type = "video";
-    } elseif (preg_match('/"display_url":"([^"]+)"/', $html, $m)) {
-        $mediaUrl = stripslashes($m[1]);
-        $type = "image";
-    } else {
-        echo json_encode(["error" => "İçerik bulunamadı veya özel hesap."]);
-        exit;
-    }
-
-    echo json_encode([
-        "status" => "ok",
-        "type" => $type,
-        "media_url" => $mediaUrl,
-        "requested_url" => $url
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+if (!$response) {
+    echo json_encode(["error" => "API'den yanıt alınamadı."]);
     exit;
 }
 
-// 3️⃣ oEmbed başarılıysa formatla
-$result = [
-    "status" => "ok",
-    "type" => "post",
-    "author_name" => $data["author_name"] ?? null,
-    "title" => $data["title"] ?? null,
-    "thumbnail_url" => $data["thumbnail_url"] ?? null,
-    "media_url" => $data["thumbnail_url"] ?? null,
-];
-
-echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+echo $response;
 ?>
