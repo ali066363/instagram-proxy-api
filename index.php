@@ -9,40 +9,40 @@ if (!isset($_GET['url'])) {
 
 $url = $_GET['url'];
 
-// Instagram sayfasını çek
+// Instagram embed API kullanımı
+$embedUrl = "https://www.instagram.com/oembed/?url=" . urlencode($url) . "&omitscript=true";
+
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_URL, $embedUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-$html = curl_exec($ch);
+$response = curl_exec($ch);
 curl_close($ch);
 
-if (!$html) {
-    echo json_encode(["error" => "Instagram içeriği alınamadı."]);
+if (!$response) {
+    echo json_encode(["error" => "Instagram'dan veri alınamadı."]);
     exit;
 }
 
-// meta tag'leri parse et
-preg_match('/"video_url":"([^"]+)"/', $html, $video);
-preg_match('/"display_url":"([^"]+)"/', $html, $image);
-preg_match('/"accessibility_caption":"([^"]+)"/', $html, $caption);
+$data = json_decode($response, true);
 
-$response = [];
-
-if (!empty($video[1])) {
-    $response["type"] = "video";
-    $response["video_url"] = stripslashes($video[1]);
-    $response["thumbnail"] = stripslashes($image[1] ?? '');
-    $response["caption"] = stripslashes($caption[1] ?? '');
-} elseif (!empty($image[1])) {
-    $response["type"] = "image";
-    $response["image_url"] = stripslashes($image[1]);
-    $response["caption"] = stripslashes($caption[1] ?? '');
-} else {
-    $response["error"] = "İçerik bulunamadı veya özel hesap.";
+if (!$data || isset($data['error'])) {
+    echo json_encode(["error" => "İçerik bulunamadı veya özel hesap."]);
+    exit;
 }
 
-echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+// Çıktıyı düzenle
+$result = [
+    "type" => "post",
+    "author_name" => $data["author_name"] ?? null,
+    "author_url" => $data["author_url"] ?? null,
+    "title" => $data["title"] ?? null,
+    "thumbnail_url" => $data["thumbnail_url"] ?? null,
+    "media_url" => $data["thumbnail_url"] ?? null,
+    "html" => $data["html"] ?? null
+];
+
+echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 ?>
